@@ -40,12 +40,12 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
       etcMass: '#10A210',
     };
 
-    const linePalette = {
-      proteinPerc: '#9D1CE8',
+    const linePalette: { [key: string]: string } = {
+      proteinPerc: '#5f2369',
       waterPerc: '#0465DF',
     };
 
-    const chartMargins = { top: 0, left: 40, right: 0, bottom: 40 };
+    const chartMargins = { top: 0, left: 40, right: 0, bottom: 60 };
 
     const unitModifier = options.unit === 'kgs' ? 1 : 2.2;
 
@@ -57,7 +57,7 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
     const dataFatMass = dataFrames.fields.find((frame) => frame.name === options.fatMassLbl);
     const dataMuscleMass = dataFrames.fields.find((frame) => frame.name === options.muscleMassLbl);
     const dataBoneMass = dataFrames.fields.find((frame) => frame.name === options.boneMassLbl);
-    //const etcLabel = options.etcMassLbl;
+    //const etcLabel = options.etcMassLbl; etc is such a small % I dont even show it
 
     const dataWaterPerc = dataFrames.fields.find((frame) => frame.name === options.waterPercLbl);
     const dataProteinPerc = dataFrames.fields.find((frame) => frame.name === options.proteinPercLbl);
@@ -69,8 +69,8 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
         fatMass: round(dataFatMass?.values.get(i) * unitModifier, 2),
         muscleMass: round(dataMuscleMass?.values.get(i) * unitModifier, 2),
         boneMass: round(dataBoneMass?.values.get(i) * unitModifier, 2),
-        waterPerc: round(dataWaterPerc?.values.get(i) * unitModifier, 2),
-        proteinPerc: round(dataProteinPerc?.values.get(i) * unitModifier, 2),
+        waterPerc: round(dataWaterPerc?.values.get(i), 2),
+        proteinPerc: round(dataProteinPerc?.values.get(i), 2),
         etcMass: 0,
       };
       datum.etcMass = datum.weight - datum.fatMass - datum.muscleMass - datum.boneMass;
@@ -140,49 +140,70 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
         return y(d[1]);
       });
 
+    // draw fill for stacked chart
     chartG
       .selectAll('path.stackedComp')
       .data(series)
       .enter()
       .append('path')
-      .attr('d', area)
       .classed('stackedComp', true)
       .attr('fill', (d) => stackPalette[d.key])
-      .attr('fill-opacity', '0.6');
+      .attr('fill-opacity', '0.4');
 
+    chartG
+      .selectAll('path.stackedComp')
+      .data(series)
+      .attr('d', area as any);
+
+    // draw top line for muscle
     chartG
       .selectAll('path.muscleLine')
       .data(series)
       .enter()
       .append('path')
-      .attr('d', stackMassLine(series.find((d) => d.key === 'muscleMass') as any))
       .classed('muscleLine', true)
       .attr('stroke', stackPalette.muscleMass)
       .attr('fill', 'none')
       .attr('stroke-width', 3);
 
     chartG
+      .selectAll('path.muscleLine')
+      .data(series)
+      .attr('d', stackMassLine(series.find((d) => d.key === 'muscleMass') as any));
+
+    // draw top line for fat
+    chartG
       .selectAll('path.fatLine')
       .data(series)
       .enter()
       .append('path')
-      .attr('d', stackMassLine(series.find((d) => d.key === 'fatMass') as any))
       .classed('fatLine', true)
       .attr('stroke', stackPalette.fatMass)
       .attr('fill', 'none')
       .attr('stroke-width', 3);
 
     chartG
+      .selectAll('path.fatLine')
+      .data(series)
+      .attr('d', stackMassLine(series.find((d) => d.key === 'fatMass') as any));
+
+    // draw top line for bone
+    chartG
       .selectAll('path.boneLine')
       .data(series)
       .enter()
       .append('path')
-      .attr('d', stackMassLine(series.find((d) => d.key === 'boneMass') as any))
       .classed('boneLine', true)
       .attr('stroke', stackPalette.boneMass)
       .attr('fill', 'none')
       .attr('stroke-width', 3);
 
+    chartG
+      .selectAll('path.boneLine')
+      .data(series)
+      .attr('d', stackMassLine(series.find((d) => d.key === 'boneMass') as any));
+
+    // draw dashed line for water %
     chartG
       .selectAll('path.waterPerc')
       .data([1])
@@ -195,6 +216,7 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
       .attr('stroke-dasharray', '10 5')
       .attr('stroke-width', 3);
 
+    // draw dashed line for protein %
     chartG
       .selectAll('path.proteinPerc')
       .data([1])
@@ -207,14 +229,13 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
       .attr('stroke-dasharray', '10 5')
       .attr('stroke-width', 3);
 
+    // y axis
+    svg.selectAll('g.yAxis').data([0]).enter().append('g').classed('yAxis', true);
+
     svg
-      .selectAll('g.yAxis')
-      .data([options.unit])
-      .enter()
-      .append('g')
-      .classed('yAxis', true)
+      .select('g.yAxis')
       .attr('transform', `translate(${chartMargins.left},0)`)
-      .call(yAxis)
+      .call(yAxis as any)
       .call((g) => g.select('.domain').remove())
       .call((g) =>
         g
@@ -226,24 +247,70 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
       .call((g) =>
         g
           .append('text')
+          .classed('domain', true)
           .attr('x', -chartMargins.left)
           .attr('y', 10)
           .attr('fill', 'currentColor')
           .attr('text-anchor', 'start')
-          .text((d) => {
-            console.log(d);
-            return d;
-          })
+          .text(options.unit)
       );
 
+    // x axis
+    svg.selectAll('g.xAxis').data([1]).enter().append('g').classed('xAxis', true);
+
     svg
-      .selectAll('g.xAxis')
-      .data([1])
-      .enter()
-      .append('g')
-      .classed('xAxis', true)
+      .select('g.xAxis')
       .attr('transform', `translate(0,${height - chartMargins.bottom})`)
-      .call(xAxis);
+      .call(xAxis as any);
+
+    // legend
+    const stackPaletteLegend = Object.keys(stackPalette).map((key) => {
+      return { label: key, color: stackPalette[key], isStack: true };
+    });
+    const linePaletteLegend = Object.keys(linePalette).map((key) => {
+      return { label: key, color: linePalette[key], isStack: false };
+    });
+    const allPalette = stackPaletteLegend.concat(linePaletteLegend);
+    const sectionWidth = Math.floor(width / allPalette.length) - chartMargins.left;
+
+    const legendGrp = svg.selectAll('g.legend').data([0]).enter().append('g').classed('legend', true);
+
+    legendGrp
+      .selectAll('line.legendLine')
+      .data(allPalette)
+      .enter()
+      .append('line')
+      .classed('legendLine', true)
+      .attr('x1', (d, i) => {
+        return i * sectionWidth + chartMargins.left;
+      })
+      .attr('y1', height - 20)
+      .attr('x2', (d, i) => {
+        return i * sectionWidth + chartMargins.left + 40;
+      })
+      .attr('y2', height - 20)
+      .attr('stroke', (d) => {
+        return d.color;
+      })
+      .attr('stroke-dasharray', (d) => {
+        return d.isStack ? 'none' : '10 5';
+      })
+      .attr('stroke-width', 3);
+
+    legendGrp
+      .selectAll('text.legendText')
+      .data(allPalette)
+      .enter()
+      .append('text')
+      .classed('legendText', true)
+      .attr('x', (d, i) => {
+        return i * sectionWidth + chartMargins.left + 50;
+      })
+      .attr('y', height - 15)
+      .attr('fill', 'currentColor')
+      .text((d) => d.label);
+
+    console.log(allPalette);
   }, [data, options, height, width, d3Container]);
 
   return (
