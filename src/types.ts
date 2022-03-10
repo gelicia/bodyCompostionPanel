@@ -6,4 +6,5 @@ export interface BodyMetricsOptions {
   etcMassLbl: string;
   waterPercLbl: string;
   proteinPercLbl: string;
+  unit: string;
 }

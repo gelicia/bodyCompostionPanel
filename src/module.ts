@@ -4,6 +4,17 @@ import { BodyCompositionPanel } from './BodyCompositionPanel';
 
 export const plugin = new PanelPlugin<BodyMetricsOptions>(BodyCompositionPanel).setPanelOptions((builder) => {
   return builder
+    .addRadio({
+      path: 'unit',
+      name: 'Unit',
+      defaultValue: 'kgs',
+      settings: {
+        options: [
+          { value: 'kgs', label: 'Kgs' },
+          { value: 'lbs', label: 'Lbs' },
+        ],
+      },
+    })
     .addTextInput({
       path: 'weightLbl',
       name: 'Weight metric',
