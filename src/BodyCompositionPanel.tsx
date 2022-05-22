@@ -50,7 +50,7 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
     const unitModifier = options.unit === 'kgs' ? 1 : 2.2;
 
     const dataFrames = data.series[0];
-    const dataTime = dataFrames.fields.find((frame) => frame.name === 'Time');
+    const dataTime = dataFrames.fields.find((frame) => frame.name.toLowerCase() === 'time');
 
     const dataWeight = dataFrames.fields.find((frame) => frame.name === options.weightLbl);
 
@@ -78,19 +78,18 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
     });
 
     const svg = d3.select(d3Container.current);
-    const chartG = svg.selectAll('g.mainChart').data([1]).enter().append('g').classed('mainChart', true);
+    const chartG = svg.selectAll('g.mainChart');
     const xRange = [chartMargins.left, width - chartMargins.right];
     const yRange = [height - chartMargins.bottom, chartMargins.top];
 
     const metricsStack = d3.stack().keys(Object.keys(stackPalette)).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
 
     const series = metricsStack(areaData);
-    const timeRange = d3.extent<[number, number], number>(areaData, (d: any) => d.time);
     const weightMax = d3.max<[number, number], number>(areaData, (d: any) => d.weight);
 
     const x = d3
       .scaleTime()
-      .domain([timeRange[0] as number, timeRange[1] as number])
+      .domain([data.timeRange.from.toDate() as Date, data.timeRange.to.toDate() as Date])
       .range(xRange);
 
     const y = d3
@@ -204,32 +203,37 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
       .attr('d', stackMassLine(series.find((d) => d.key === 'boneMass') as any));
 
     // draw dashed line for water %
+
+    chartG.selectAll('path.waterPerc').remove();
+
     chartG
-      .selectAll('path.waterPerc')
-      .data([1])
-      .enter()
       .append('path')
-      .attr('d', waterPercLine(areaData))
+      .data(areaData)
       .classed('waterPerc', true)
       .attr('stroke', linePalette.waterPerc)
       .attr('fill', 'none')
       .attr('stroke-dasharray', '10 5')
       .attr('stroke-width', 3);
 
-    // draw dashed line for protein %
+    chartG.selectAll('path.waterPerc').attr('d', waterPercLine(areaData));
+
+    // draw dashed line for water %
+
+    chartG.selectAll('path.proteinPerc').remove();
+
     chartG
-      .selectAll('path.proteinPerc')
-      .data([1])
-      .enter()
       .append('path')
-      .attr('d', proteinPercLine(areaData))
+      .data(areaData)
       .classed('proteinPerc', true)
       .attr('stroke', linePalette.proteinPerc)
       .attr('fill', 'none')
       .attr('stroke-dasharray', '10 5')
       .attr('stroke-width', 3);
 
+    chartG.selectAll('path.proteinPerc').attr('d', proteinPercLine(areaData));
+
     // y axis
+    svg.selectAll('g.yAxis').remove();
     svg.selectAll('g.yAxis').data([0]).enter().append('g').classed('yAxis', true);
 
     svg
@@ -256,6 +260,7 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
       );
 
     // x axis
+    svg.selectAll('g.xAxis').remove();
     svg.selectAll('g.xAxis').data([1]).enter().append('g').classed('xAxis', true);
 
     svg
@@ -273,7 +278,7 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
     const allPalette = stackPaletteLegend.concat(linePaletteLegend);
     const sectionWidth = Math.floor(width / allPalette.length) - chartMargins.left;
 
-    const legendGrp = svg.selectAll('g.legend').data([0]).enter().append('g').classed('legend', true);
+    const legendGrp = svg.selectAll('g.legend');
 
     legendGrp
       .selectAll('line.legendLine')
@@ -309,8 +314,6 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
       .attr('y', height - 15)
       .attr('fill', 'currentColor')
       .text((d) => d.label);
-
-    console.log(allPalette);
   }, [data, options, height, width, d3Container]);
 
   return (
@@ -330,7 +333,10 @@ export const BodyCompositionPanel: React.FC<Props> = ({ options, data, width, he
         height={height}
         xmlns="http://www.w3.org/2000/svg"
         xmlnsXlink="http://www.w3.org/1999/xlink"
-      ></svg>
+      >
+        <g className="mainChart"></g>
+        <g className="legend"></g>
+      </svg>
     </div>
   );
 };
